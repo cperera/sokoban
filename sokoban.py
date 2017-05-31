@@ -1,6 +1,7 @@
-#! /Library/Frameworks/Python.framework/Versions/2.7/bin/python
+#! /usr/local/bin/python3
 import copy
 import os
+from unittest.mock import MagicMock
 
 # We decided to use letters for input
 class Sokoboard:
@@ -71,8 +72,7 @@ class Sokoboard:
         elif self.get_square_at_location(next_location) == ".":
             player_destination = "+"
         self._set_location(newBoard, next_location, player_destination)
-        return Sokoboard.from_board(newBoard)
-        
+        return Sokoboard.from_board(newBoard)  
 
     def _set_location(self, board, location, value):
         board[location[0]][location[1]] = value
@@ -89,11 +89,11 @@ class Sokoboard:
 # When calls, prompts user for input and returns a valid (but not necessarily legal) direction
 def next_step(board, message = ""):
     os.system('cls' if os.name == 'nt' else 'clear')
-    print board.to_string()
+    print(board.to_string())
     if message:
-        print message
-    test = raw_input("Please enter a letter for movement. One of n, s, e, w (representing north, south, east, and west)\n")
-    if (not test in ["n", "s", "e", "w"]):
+        print(message)
+    test = input("Please enter a direction or command. Commands are Q for quit, R for restart \nDirection is one of n, s, e, w (north, south, east, west)\n")
+    if (not test in ["n", "s", "e", "w", "R", "Q"]): # directions, restart, quit
         return next_step(board, message = "That's not a valid input.")
     return test
 
@@ -102,39 +102,47 @@ def add_vectors(vector1, vector2):
 
 def run_test(message, actual, expected):
     if (actual != expected):
-        print message
+        print(message)
 
-def main(level = ""):
-    testboard8 = """######
-#.$  #
-#   @#
-######"""
+def play_level(level):
     if not level:
-        level = testboard8
+        raise Exception("Please supply a valid Sokoban board.")
     sok = Sokoboard(level)
+    message = ""
 
     while not sok.won():
-        #print sok.to_string()
-        step = next_step(sok)
-        while not sok.is_valid_move(step):
-            step = next_step(sok, message = "That is not a valid move")
-        sok = sok.move(step)
+        step = next_step(sok, message)
+        message = ""
+
+        if step == "Q": # quit game
+            print("You lose!")
+            return
+        elif step == "R": # restart level
+            sok = Sokoboard(level)
+        else:
+            if sok.is_valid_move(step):
+                sok = sok.move(step)
+            else:
+                message = "That is not a valid move"
 
     os.system('cls' if os.name == 'nt' else 'clear')
-    print sok.to_string()    
+    print(sok.to_string())
     
-    print "You won!!!"
+    print("You won!!!")
 
-if __name__ == '__main__':
+def main(level = ""):
+    play_level(level)
+
+def test_board():
     testlevel = """#####
 #@$.#
 #####"""
-    print "We're going to try this level:"
-    print testlevel
+    print("We're going to try this level:")
+    print(testlevel)
 
     sok = Sokoboard(testlevel)
-    print "board \n", sok.board
-    print "player at ", sok.player
+    print("board \n", sok.board)
+    print("player at ", sok.player)
 
     run_test("Should be able to move east into box with goal on other side", sok.is_valid_move("e"), True)
     run_test("Should not be able to move west into wall", sok.is_valid_move("w"), False)
@@ -202,7 +210,22 @@ if __name__ == '__main__':
     sok8_1 = sok8.move("s")
     run_test("If player moves off of goal, goal is still in previous space", sok8_1.get_square_at_location([1,2]),".")
 
-    # Restart input
+def test_quit():
+    testlevel8 = """######
+# +$ #
+#    #
+######"""
+    # Quit input
+    moves = ["s","Q"]
+    next_step = MagicMock(side_effect=moves)
+    game1 = play_level(testlevel8)
+    assert(True), "Did not run forever."
+
+    #Test restart ...
+    #Add arrow keys/WASD
+
+if __name__ == '__main__':
+
     minicosmos01 = """  #####
 ###   #
 # $ # ##
@@ -219,6 +242,7 @@ if __name__ == '__main__':
 ##$#.  #
  #@  ###
  #####  """
+    
     levels = [minicosmos01, minicosmos02]
     for level in levels:
         main(level)
